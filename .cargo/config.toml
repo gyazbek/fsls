@@ -1,0 +1,4 @@
+# Windows binaries carry their own C runtime, so a downloaded fsls.exe runs on a machine
+# without the Visual C++ Redistributable installed.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

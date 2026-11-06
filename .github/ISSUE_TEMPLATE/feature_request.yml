@@ -1,0 +1,22 @@
+name: Feature request
+description: A new kind of storage, column, filter or output to support
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem first; a proposed solution is optional.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Platforms it applies to
+      multiple: true
+      options: [Windows, Linux, macOS]
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: The output you would like to see, or how the OS reports the information today.

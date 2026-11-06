@@ -1,0 +1,60 @@
+[package]
+name = "fsls"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "List mounted file systems on Windows, Linux and macOS: drives, volumes, mount points and network shares"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/gyazbek/fsls"
+readme = "README.md"
+keywords = ["filesystem", "disk", "raid", "df", "cli"]
+categories = ["command-line-utilities", "filesystem"]
+include = ["/src", "/build.rs", "/Cargo.toml", "/Cargo.lock", "/README.md", "/CHANGELOG.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
+
+# `cargo binstall fsls` downloads the release archive instead of compiling.
+# Names must match .github/workflows/release.yml.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/fsls-v{ version }-{ target }.tar.gz"
+bin-dir = "fsls-v{ version }-{ target }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/fsls-v{ version }-{ target }.zip"
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/fsls-v{ version }-{ target }.zip"
+pkg-fmt = "zip"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+clap_complete = "4.6.11"
+clap_mangen = "0.3.3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_NetworkManagement_WNet",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Console",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_IO",
+    "Win32_System_Ioctl",
+    "Win32_System_Variant",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.191"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[dev-dependencies]
+serde_json = "1.0.154"
