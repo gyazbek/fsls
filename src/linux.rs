@@ -88,15 +88,20 @@ fn build(
         root: Path::new("/sys"),
     };
     let (device, renamed) = if m.source.starts_with("/dev/") {
-        match fs::canonicalize(&m.source) {
-            Ok(dev) => (Some(dev), false),
-            // `/dev/root`: the kernel's name for a root mounted without an initramfs (cloud
-            // VMs). No such node exists, so find the device from the mount's number instead.
-            Err(_) => {
-                let dev = sys.block_by_number(&m.dev);
-                let renamed = dev.is_some();
-                (dev, renamed)
-            }
+        let canonical = fs::canonicalize(&m.source).ok();
+        let known = |d: &PathBuf| {
+            d.file_name()
+                .is_some_and(|n| sys.block(&n.to_string_lossy()).exists())
+        };
+        match canonical {
+            Some(dev) if known(&dev) => (Some(dev), false),
+            // `/dev/root`, the kernel's name for a root mounted without an initramfs (cloud
+            // VMs), is either missing or a node that sysfs does not know by that name. The
+            // mount's device number names the real block device.
+            other => match sys.block_by_number(&m.dev) {
+                Some(dev) => (Some(dev), true),
+                None => (other, false),
+            },
         }
     } else {
         (None, false)
