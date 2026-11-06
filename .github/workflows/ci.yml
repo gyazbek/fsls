@@ -1,0 +1,103 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly, so a newly published advisory against a dependency is caught without a push.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+
+      - name: Unit + platform tests
+        run: cargo test --locked
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Smoke run
+        shell: bash
+        run: target/release/fsls -d -a && target/release/fsls --json > /dev/null
+
+      # Real arrays, not fixtures: each script builds one, degrades it, asserts fsls output,
+      # and tears it down.
+      - name: Real md RAID1 and hung FUSE mount (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends mdadm
+          sudo modprobe raid1
+          sudo bash scripts/test-md-raid.sh target/release/fsls
+          sudo bash scripts/test-hung-mount.sh target/release/fsls
+
+      - name: Real ZFS pool (Linux)
+        if: runner.os == 'Linux'
+        shell: bash # -o pipefail, so the tee below cannot hide a failure
+        run: |
+          sudo apt-get install -y -qq --no-install-recommends zfsutils-linux
+          sudo bash scripts/test-zfs.sh target/release/fsls | tee zfs.log
+          if grep -q '^SKIP' zfs.log; then echo "::warning::ZFS test skipped: no zfs module on this runner"; fi
+
+      - name: Real AppleRAID mirror (macOS)
+        if: runner.os == 'macOS'
+        run: sudo bash scripts/test-apple-raid.sh target/release/fsls
+
+      - name: Real Storage Spaces mirror (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: scripts/test-storage-spaces.ps1 target/release/fsls.exe
+
+  lint:
+    # Each platform compiles different code, so clippy runs on all three.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: "1.88" # keep in sync with rust-version in Cargo.toml
+      - run: cargo check --all-targets --locked
+
+  # RustSec advisories, licenses and sources for every target (config: deny.toml).
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1

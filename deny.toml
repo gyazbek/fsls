@@ -1,0 +1,29 @@
+# cargo-deny: run `cargo deny check` (CI runs it on every push).
+
+[graph]
+# Check every platform's dependencies, not just the host's.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+
+[advisories]
+# Any RustSec advisory (vulnerable, unmaintained, yanked) fails the check.
+yanked = "deny"
+
+[licenses]
+# Licenses compatible with distributing fsls as MIT OR Apache-2.0.
+allow = ["MIT", "Apache-2.0", "Unicode-3.0"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

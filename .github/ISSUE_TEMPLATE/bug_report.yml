@@ -1,0 +1,57 @@
+name: Bug report
+description: Wrong, missing or confusing output, a crash, or a hang
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: fsls -d /srv
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: fsls version
+      description: Output of `fsls --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, Linux, macOS]
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version / distribution
+      placeholder: Windows 11 24H2, Ubuntu 24.04, macOS 15.2
+    validations:
+      required: true
+  - type: textarea
+    id: storage
+    attributes:
+      label: Storage setup
+      description: Only if relevant, e.g. "md RAID1 over two SATA disks with LVM on top", "Storage Spaces parity pool", "NFS share".
+  - type: textarea
+    id: output
+    attributes:
+      label: Output of `fsls -a -d --json`
+      description: |
+        This contains volume labels, serial numbers/UUIDs, mount paths and disk models.
+        Replace anything you consider private with placeholders; keep the structure.
+      render: json
+  - type: textarea
+    id: native
+    attributes:
+      label: What the OS itself reports (optional)
+      description: e.g. `lsblk -o NAME,TYPE,TRAN,MODEL,MOUNTPOINTS` and `cat /proc/mdstat`, `Get-PhysicalDisk`, or `diskutil list` / `diskutil appleRAID list`.
+      render: text
