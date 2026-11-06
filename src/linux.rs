@@ -84,11 +84,23 @@ fn build(
     labels: &HashMap<PathBuf, String>,
     uuids: &HashMap<PathBuf, String>,
 ) -> FileSystem {
-    let device = m
-        .source
-        .starts_with("/dev/")
-        .then(|| fs::canonicalize(&m.source).ok())
-        .flatten();
+    let sys = Sysfs {
+        root: Path::new("/sys"),
+    };
+    let (device, renamed) = if m.source.starts_with("/dev/") {
+        match fs::canonicalize(&m.source) {
+            Ok(dev) => (Some(dev), false),
+            // `/dev/root`: the kernel's name for a root mounted without an initramfs (cloud
+            // VMs). No such node exists, so find the device from the mount's number instead.
+            Err(_) => {
+                let dev = sys.block_by_number(&m.dev);
+                let renamed = dev.is_some();
+                (dev, renamed)
+            }
+        }
+    } else {
+        (None, false)
+    };
     let kind = Kind::from_fs_type(&m.fs_type).unwrap_or_else(|| match &device {
         Some(dev) => block_kind(dev),
         None if matches!(m.fs_type.as_str(), "zfs" | "overlay" | "btrfs") => Kind::Fixed,
@@ -112,9 +124,6 @@ fn build(
     let lookup = |map: &HashMap<PathBuf, String>| device.as_ref().and_then(|d| map.get(d)).cloned();
     let id = lookup(uuids);
 
-    let sys = Sysfs {
-        root: Path::new("/sys"),
-    };
     let mut roots: Vec<String> = device
         .iter()
         .filter_map(|d| d.file_name()?.to_str().map(String::from))
@@ -141,7 +150,10 @@ fn build(
     FileSystem {
         label: lookup(labels).unwrap_or_default(),
         id,
-        source: (!m.source.is_empty() && m.source != "none").then_some(m.source),
+        source: match (&device, renamed) {
+            (Some(dev), true) => Some(dev.to_string_lossy().into_owned()),
+            _ => (!m.source.is_empty() && m.source != "none").then_some(m.source),
+        },
         mounts,
         fs_type: m.fs_type,
         kind,
@@ -186,6 +198,12 @@ const BTRFS_PROFILES: &[&str] = &[
 impl Sysfs<'_> {
     fn block(&self, name: &str) -> PathBuf {
         self.root.join("class/block").join(name)
+    }
+
+    /// `/dev/sda1` for a `major:minor` device number, when it is a block device.
+    fn block_by_number(&self, dev: &str) -> Option<PathBuf> {
+        let real = fs::canonicalize(self.root.join("dev/block").join(dev)).ok()?;
+        Some(Path::new("/dev").join(real.file_name()?))
     }
 
     /// Physical disks under these block devices, plus md RAID level and health.
@@ -809,6 +827,11 @@ mod tests {
         symlink(virt.join("dm-1"), class.join("dm-1")).unwrap();
         symlink(virt.join("dm-2"), class.join("dm-2")).unwrap();
 
+        // /sys/dev/block/MAJ:MIN -> the device, used to resolve `/dev/root`.
+        let by_number = root.join("dev/block");
+        fs::create_dir_all(&by_number).unwrap();
+        symlink(class.join("sda1"), by_number.join("8:1")).unwrap();
+
         let btrfs = root.join("fs/btrfs/1234-uuid");
         fs::create_dir_all(btrfs.join("devices/nvme0n1")).unwrap();
         fs::create_dir_all(btrfs.join("devices/sda1")).unwrap();
@@ -816,6 +839,8 @@ mod tests {
         write(&btrfs.join("allocation/data/total_bytes"), "1");
 
         let sys = Sysfs { root: &root };
+        assert_eq!(sys.block_by_number("8:1"), Some(PathBuf::from("/dev/sda1")));
+        assert_eq!(sys.block_by_number("0:42"), None); // tmpfs, btrfs: not block devices
         let health = |s: &Stack| s.health.as_ref().map(|h| (h.ok, h.text.clone()));
 
         let s = sys.stack(&["dm-0".into()]);
