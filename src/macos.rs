@@ -286,7 +286,12 @@ impl Diskutil {
     fn device(&self, name: String) -> Device {
         let xml = self.info(&name);
         let get = |k: &str| plist::value(&xml, k).unwrap_or_default();
-        let bus = bus_name(&get("BusProtocol"));
+        let model = get("MediaName");
+        let mut bus = bus_name(&get("BusProtocol"));
+        // Virtual machines (`Apple Inc. VirtIO Block Media`) report no bus protocol.
+        if bus.is_empty() && model.contains("VirtIO") {
+            bus = "virtio".into();
+        }
         let media = match (bus.as_str(), get("SolidState").as_str()) {
             ("image", _) => "",
             (_, "true") => "ssd",
@@ -296,7 +301,7 @@ impl Diskutil {
         Device {
             name,
             bus,
-            model: get("MediaName"),
+            model,
             media: media.into(),
             size: get("Size").parse().unwrap_or(0),
             state: String::new(),
