@@ -1,9 +1,0 @@
-
-First release.
-
-- List mounted file systems on Windows, Linux and macOS with size, usage, type, kind and bus.
-- Resolve each file system to its physical disks (model, SSD/HDD, bus, size) with `-d`.
-- Software RAID layout and health: Linux md and btrfs, Windows Storage Spaces, macOS AppleRAID.
-  Degraded arrays are reported on stderr.
-- Per-mount `--timeout` so dead network mounts cannot hang the listing.
-- Filters (`-t`, `-x`, `-k`, `--bus`), sorting, `--total`, and `--json` output.
