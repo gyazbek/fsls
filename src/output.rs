@@ -547,7 +547,7 @@ pub fn disks_table(disks: &[Disk], units: Units, header: bool, color: bool) -> S
     render_styled(&all, |c| c == 1, styles)
 }
 
-/// `APPLE SSD (fabric, ssd)`
+/// `Samsung SSD 870 EVO 1TB (sata, ssd)`
 fn describe(d: &Device) -> String {
     let extra: Vec<&str> = [d.bus.as_str(), d.media.as_str()]
         .into_iter()
@@ -1049,7 +1049,7 @@ sdh             932G  -
         root.pool = Some(crate::fs::Pool::apfs("disk3".into()));
         let mut data = sample("/System/Volumes/Data", "apfs", 460 * G, 200 * G);
         data.pool = Some(crate::fs::Pool::apfs("disk3".into()));
-        let usb = sample("/Volumes/USBSTICK", "ntfs", 32 * G, 24 * G);
+        let usb = sample("/Volumes/USBSTICK", "exfat", 32 * G, 24 * G);
         let opt = opts(false, false, false, true);
         let t = table(&[root, data, usb], &opt);
         let total = t.lines().last().unwrap();

@@ -5,10 +5,10 @@ how full it is, which physical disks it lives on, and whether the RAID under it 
 
 ```
 $ fsls
-MOUNT  LABEL       FS    KIND   BUS   SIZE  USED  AVAIL  USE%
-C:\    System  NTFS  fixed  nvme  1.8T  1.8T   9.9G   99% [#########.]
-D:\    Data     NTFS  fixed  nvme  3.6T  2.3T   1.3T   64% [######....]
-J:\    Backup     NTFS  fixed  nvme  931G  614G   318G   66% [#######...]
+MOUNT  LABEL   FS     KIND       BUS   SIZE  USED  AVAIL  USE%
+C:\    System  NTFS   fixed      nvme  476G  402G    74G   84% [########..]
+D:\    Data    NTFS   fixed      sata  7.3T  4.1T   3.2T   56% [######....]
+E:\    Backup  exFAT  removable  usb   238G   52G   186G   22% [##........]
 ```
 
 A Storage Spaces mirror that just lost one of its disks:
@@ -116,15 +116,15 @@ container, an AppleRAID set or a Storage Spaces pool show what they belong to, e
 
 ```
 > fsls disks
-NAME            SIZE  TYPE         FS     LABEL       DETAILS
-PhysicalDrive0  3.6T  gpt                             ST8000VN004 (nvme, ssd)
-  #1             16M  MS reserved                     -
-  #2            3.6T  Basic data   NTFS   Data     D:\
-PhysicalDrive2  1.8T  gpt                             Crucial P5 Plus 500GB (nvme, ssd)
-  #1            499M  Recovery     NTFS               not mounted
-  #2            100M  EFI          FAT32              not mounted
-  #3            128M  MS reserved                     -
-  #4            1.8T  Basic data   NTFS   System  C:\
+NAME            SIZE  TYPE         FS     LABEL   DETAILS
+PhysicalDrive0  477G  gpt                         Crucial P5 Plus 500GB (nvme, ssd)
+  #1            100M  EFI          FAT32          not mounted
+  #2             16M  MS reserved                 -
+  #3            476G  Basic data   NTFS   System  C:\
+  #4            650M  Recovery     NTFS           not mounted
+PhysicalDrive1  7.3T  gpt                         ST8000VN004 (sata, hdd)
+  #1             16M  MS reserved                 -
+  #2            7.3T  Basic data   NTFS   Data    D:\
 ```
 
 DETAILS is the device on disk rows and what is on the partition on partition rows.
